@@ -3,6 +3,7 @@
 #include <cmath>
 #include <random>
 #include <fstream>
+#include <algorithm>
 
 enum class ActivationType {
     Sigmoid,
