@@ -30,7 +30,7 @@ Download the latest binary at: https://github.com/soviet-sorzus/Z.EU.S/releases/
 
 Run it as administrator.
 
-For Linux users: (DIDN'T TEST)
+For Linux users: (DIDN'T TEST BUT I KNOW IT SHOULD BE LIKE THAT)
 
 Make sure you have NetBeans C++ IDE installed. If not, get it from here: https://netbeans.apache.org/download/nb17/index.html
 Download the source code at: https://github.com/soviet-sorzus/Z.EU.S/releases/
