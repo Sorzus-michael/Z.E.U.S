@@ -5,7 +5,7 @@
 #include <fstream>
 #include <algorithm>
 
- enum class ActivationType
+ enum class ActivationType 
 { 
 Sigmoid, 
 ReLU, 
@@ -14,10 +14,11 @@ Tanh
 
  
 double
-activate (double x, ActivationType activationType)
+activate (double x, ActivationType activationType) 
 {
   
 switch (activationType)
+    
     {
     
 case ActivationType::Sigmoid:
@@ -43,13 +44,15 @@ return x;
 
  
 double
-activateDerivative (double x, ActivationType activationType)
+activateDerivative (double x, ActivationType activationType) 
 {
   
 switch (activationType)
+    
     {
     
 case ActivationType::Sigmoid:
+      
       {
 	
 double sigmoidX = activate (x, ActivationType::Sigmoid);
@@ -83,7 +86,7 @@ std::mt19937 rng (std::random_device
 		     ());
 
  
-class NeuralNetwork
+class NeuralNetwork 
 {
 
 private:
@@ -96,7 +99,7 @@ std::vector < std::vector < std::vector < double >>>
  
 public:
 NeuralNetwork (const std::vector < int >&layerSizes,
-		  ActivationType activationType)
+		  ActivationType activationType) 
   {
     
 int
@@ -107,17 +110,20 @@ layers.resize (numLayers);
 weights.resize (numLayers - 1);
     
  
-for (int i = 0; i < numLayers; ++i)
-      {
-	
-layers[i].resize (layerSizes[i]);
-      
-} 
- 
 std::uniform_real_distribution < double >
     dist (-1.0, 1.0);
     
+ 
+for (int i = 0; i < numLayers; ++i)
+      
+      {
+	
+layers[i].resize (layerSizes[i]);
+    
+} 
+ 
 for (int i = 0; i < numLayers - 1; ++i)
+      
       {
 	
 int
@@ -129,10 +135,13 @@ int
 weights[i].resize (currentLayerSize,
 			    std::vector < double >(nextLayerSize));
 	
+ 
 for (int j = 0; j < currentLayerSize; ++j)
+	  
 	  {
 	    
 for (int k = 0; k < nextLayerSize; ++k)
+	      
 	      {
 		
 weights[i][j][k] = dist (rng);
@@ -144,13 +153,14 @@ weights[i][j][k] = dist (rng);
  
 std::vector < double >
   feedForward (const std::vector < double >&inputs,
-	       ActivationType activationType)
+	       ActivationType activationType) 
   {
     
 layers[0] = inputs;
     
  
 for (size_t i = 0; i < weights.size (); ++i)
+      
       {
 	
 int
@@ -159,18 +169,23 @@ int
 int
 	  nextLayerSize = layers[i + 1].size ();
 	
+ 
 for (int j = 0; j < nextLayerSize; ++j)
+	  
 	  {
 	    
 double
 	      sum = 0.0;
 	    
+ 
 for (int k = 0; k < currentLayerSize; ++k)
+	      
 	      {
 		
 sum += layers[i][k] * weights[i][k][j];
 	      
 } 
+ 
 layers[i + 1][j] = activate (sum, activationType);
       
 } 
@@ -183,12 +198,14 @@ return layers.back ();
  
 void
   train (const std::vector < std::vector < double >>&trainingData,
-	 const std::vector < std::vector < double >>&targetOutputs,
+	 
+const std::vector < std::vector < double >>&targetOutputs,
 	 
 int numEpochs, double learningRate, int batchSize,
-	 double regularization, std::string logFilename,
 	 
-ActivationType activationType)
+double regularization, std::string logFilename,
+	 
+ActivationType activationType) 
   {
     
 int
@@ -197,13 +214,14 @@ int
 int
       numLayers = layers.size ();
     
+ 
 std::ofstream logFile (logFilename);
     
  
 for (int epoch = 1; epoch <= numEpochs; ++epoch)
+      
       {
 	
- 
 std::vector < int >
 	indices (numSamples);
 	
@@ -215,14 +233,17 @@ std::shuffle (indices.begin (), indices.end (), rng);
 double
 	  epochError = 0.0;
 	
+ 
 for (int i = 0; i < numSamples; i += batchSize)
+	  
 	  {
 	    
- 
 std::vector < std::vector < std::vector < double >>>
 	    gradients (weights.size ());
 	  
+ 
 for (auto & gradient:gradients)
+	      
 	      {
 		
 gradient.resize (gradient.size (),
@@ -233,6 +254,7 @@ gradient.resize (gradient.size (),
  
 for (int j = i; j < std::min (i + batchSize, numSamples);
 			 ++j)
+	      
 	      {
 		
 int
@@ -250,6 +272,7 @@ std::vector < double >
 		
  
 for (size_t k = 0; k < error.size (); ++k)
+		  
 		  {
 		    
 error[k] = target[k] - output[k];
@@ -261,6 +284,7 @@ epochError += std::pow (error[k], 2);
  
 for (int layerIndex = numLayers - 2; layerIndex >= 0;
 			--layerIndex)
+		  
 		  {
 		    
 int
@@ -271,12 +295,15 @@ int
 		    
  
 for (int k = 0; k < nextLayerSize; ++k)
+		      
 		      {
 			
 double
 			  gradientSum = 0.0;
 			
+ 
 for (int n = 0; n < currentLayerSize; ++n)
+			  
 			  {
 			    
 gradientSum +=
@@ -288,6 +315,7 @@ gradients[layerIndex][n][k] +=
 						  activationType);
 			  
 } 
+ 
 error[k] = gradientSum;
 	    
 } 
@@ -296,6 +324,7 @@ error[k] = gradientSum;
  
 for (size_t layerIndex = 0;
 			       layerIndex < weights.size (); ++layerIndex)
+	      
 	      {
 		
 int
@@ -304,10 +333,13 @@ int
 int
 		  nextLayerSize = layers[layerIndex + 1].size ();
 		
+ 
 for (int j = 0; j < currentLayerSize; ++j)
+		  
 		  {
 		    
 for (int k = 0; k < nextLayerSize; ++k)
+		      
 		      {
 			
 weights[layerIndex][j][k] +=
@@ -334,10 +366,9 @@ logFile.close ();
 
  
 int
-main ()
+main () 
 {
   
- 
 std::vector < std::vector < double >>
   trainingData = { 
 {0.0, 0.0}, 
@@ -346,6 +377,7 @@ std::vector < std::vector < double >>
 {1.0, 1.0} 
   };
   
+ 
 std::vector < std::vector < double >>
   targetOutputs = { 
 {0.0}, 
@@ -358,7 +390,6 @@ std::vector < std::vector < double >>
 std::vector < int >
   layerSizes = { 2, 8, 1 };
   
- 
 NeuralNetwork network (layerSizes, ActivationType::ReLU);
   
  
@@ -366,13 +397,13 @@ int
     numEpochs = 5000;
   
 double
-    learningRate = 0.01;
+    learningRate = 0.1;
   
 int
     batchSize = 4;
   
 double
-    regularization = 0.001;
+    regularization = 0.0;
   
 std::string logFilename = "log.txt";
   
@@ -380,20 +411,30 @@ std::string logFilename = "log.txt";
 network.train (trainingData, targetOutputs, numEpochs, learningRate,
 		    batchSize, regularization, logFilename,
 		    ActivationType::ReLU);
-
+  
  
-for (const auto & input:trainingData)
+std::cout << "Training complete!" << std::endl;
+  
+ 
+std::cout << "Testing..." << std::endl;
+  
+for (size_t i = 0; i < trainingData.size (); ++i)
+    
     {
       
-std::vector < double >
-	output = network.feedForward (input, ActivationType::ReLU);
-      
 std::
-	cout << "Input: " << input[0] << ", " << input[1] << " Output: " <<
-	output[0] << std::endl;
+	cout << "Input: " << trainingData[i][0] << ", " << trainingData[i][1]
+	<< std::endl;
+      
+std::vector < double >
+	output = network.feedForward (trainingData[i], ActivationType::ReLU);
+      
+std::cout << "Output: " << output[0] << std::endl;
     
 } 
  
 return 0;
 
 }
+
+
