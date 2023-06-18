@@ -4,8 +4,11 @@
 #include <random>
 #include <fstream>
 #include <algorithm>
+#include <numeric>
+#include <stdexcept>
+#include <sstream>
 
- enum class ActivationType 
+ enum class ActivationType
 { 
 Sigmoid, 
 ReLU, 
@@ -14,11 +17,10 @@ Tanh
 
  
 double
-activate (double x, ActivationType activationType) 
+activate (double x, ActivationType activationType)
 {
   
 switch (activationType)
-    
     {
     
 case ActivationType::Sigmoid:
@@ -44,15 +46,13 @@ return x;
 
  
 double
-activateDerivative (double x, ActivationType activationType) 
+activateDerivative (double x, ActivationType activationType)
 {
   
 switch (activationType)
-    
     {
     
 case ActivationType::Sigmoid:
-      
       {
 	
 double sigmoidX = activate (x, ActivationType::Sigmoid);
@@ -86,7 +86,7 @@ std::mt19937 rng (std::random_device
 		     ());
 
  
-class NeuralNetwork 
+class NeuralNetwork
 {
 
 private:
@@ -99,7 +99,7 @@ std::vector < std::vector < std::vector < double >>>
  
 public:
 NeuralNetwork (const std::vector < int >&layerSizes,
-		  ActivationType activationType) 
+		  ActivationType activationType)
   {
     
 int
@@ -115,7 +115,6 @@ std::uniform_real_distribution < double >
     
  
 for (int i = 0; i < numLayers; ++i)
-      
       {
 	
 layers[i].resize (layerSizes[i]);
@@ -123,7 +122,6 @@ layers[i].resize (layerSizes[i]);
 } 
  
 for (int i = 0; i < numLayers - 1; ++i)
-      
       {
 	
 int
@@ -137,11 +135,9 @@ weights[i].resize (currentLayerSize,
 	
  
 for (int j = 0; j < currentLayerSize; ++j)
-	  
 	  {
 	    
 for (int k = 0; k < nextLayerSize; ++k)
-	      
 	      {
 		
 weights[i][j][k] = dist (rng);
@@ -153,14 +149,13 @@ weights[i][j][k] = dist (rng);
  
 std::vector < double >
   feedForward (const std::vector < double >&inputs,
-	       ActivationType activationType) 
+	       ActivationType activationType)
   {
     
 layers[0] = inputs;
     
  
 for (size_t i = 0; i < weights.size (); ++i)
-      
       {
 	
 int
@@ -171,21 +166,17 @@ int
 	
  
 for (int j = 0; j < nextLayerSize; ++j)
-	  
 	  {
 	    
 double
 	      sum = 0.0;
 	    
- 
 for (int k = 0; k < currentLayerSize; ++k)
-	      
 	      {
 		
 sum += layers[i][k] * weights[i][k][j];
 	      
 } 
- 
 layers[i + 1][j] = activate (sum, activationType);
       
 } 
@@ -205,7 +196,13 @@ int numEpochs, double learningRate, int batchSize,
 	 
 double regularization, std::string logFilename,
 	 
-ActivationType activationType) 
+ActivationType activationType,
+	 
+const std::vector < std::vector < double >>&validationData,
+	 
+const std::vector < std::vector < double >>&validationTargets,
+	 
+double earlyStoppingThreshold)
   {
     
 int
@@ -217,25 +214,40 @@ int
  
 std::ofstream logFile (logFilename);
     
- 
-for (int epoch = 1; epoch <= numEpochs; ++epoch)
-      
+if (!logFile)
       {
 	
+throw std::runtime_error ("Failed to open log file: " + logFilename);
+      
+}
+    
+ 
 std::vector < int >
-	indices (numSamples);
-	
+    indices (numSamples);
+    
 std::iota (indices.begin (), indices.end (), 0);
+    
+ 
+int
+      bestEpoch = 0;
+    
+double
+      bestValidationError = std::numeric_limits < double >::max ();
+    
+std::vector < std::vector < std::vector < double >>>
+      bestWeights = weights;
+    
+ 
+for (int epoch = 1; epoch <= numEpochs; ++epoch)
+      {
 	
 std::shuffle (indices.begin (), indices.end (), rng);
 	
- 
 double
 	  epochError = 0.0;
 	
  
 for (int i = 0; i < numSamples; i += batchSize)
-	  
 	  {
 	    
 std::vector < std::vector < std::vector < double >>>
@@ -243,7 +255,6 @@ std::vector < std::vector < std::vector < double >>>
 	  
  
 for (auto & gradient:gradients)
-	      
 	      {
 		
 gradient.resize (gradient.size (),
@@ -254,7 +265,6 @@ gradient.resize (gradient.size (),
  
 for (int j = i; j < std::min (i + batchSize, numSamples);
 			 ++j)
-	      
 	      {
 		
 int
@@ -272,7 +282,6 @@ std::vector < double >
 		
  
 for (size_t k = 0; k < error.size (); ++k)
-		  
 		  {
 		    
 error[k] = target[k] - output[k];
@@ -284,7 +293,6 @@ epochError += std::pow (error[k], 2);
  
 for (int layerIndex = numLayers - 2; layerIndex >= 0;
 			--layerIndex)
-		  
 		  {
 		    
 int
@@ -295,7 +303,6 @@ int
 		    
  
 for (int k = 0; k < nextLayerSize; ++k)
-		      
 		      {
 			
 double
@@ -303,16 +310,17 @@ double
 			
  
 for (int n = 0; n < currentLayerSize; ++n)
-			  
 			  {
 			    
 gradientSum +=
 			      error[k] * weights[layerIndex][n][k];
 			    
 gradients[layerIndex][n][k] +=
-			      layers[layerIndex][n] *
-			      activateDerivative (layers[layerIndex + 1][k],
-						  activationType);
+			      
+layers[layerIndex][n] *
+			      
+activateDerivative (layers[layerIndex + 1][k],
+						   activationType);
 			  
 } 
  
@@ -324,7 +332,6 @@ error[k] = gradientSum;
  
 for (size_t layerIndex = 0;
 			       layerIndex < weights.size (); ++layerIndex)
-	      
 	      {
 		
 int
@@ -335,66 +342,257 @@ int
 		
  
 for (int j = 0; j < currentLayerSize; ++j)
-		  
 		  {
 		    
 for (int k = 0; k < nextLayerSize; ++k)
-		      
 		      {
 			
 weights[layerIndex][j][k] +=
-			  learningRate * (gradients[layerIndex][j][k] /
-					  batchSize -
-					  regularization *
-					  weights[layerIndex][j][k]);
+			  
+learningRate * (gradients[layerIndex][j][k] /
+					   batchSize -
+					   
+regularization *
+					   weights[layerIndex][j][k]);
 	  
 } 
 } 
 } 
 } 
  
-logFile << "Epoch: " << epoch << " Error: " <<
-	  epochError << std::endl;
+double
+	  validationError = 0.0;
+	
+if (!validationData.empty ())
+	  {
+	    
+for (size_t i = 0; i < validationData.size (); ++i)
+	      {
+		
+std::vector < double >
+		  output = feedForward (validationData[i], activationType);
+		
+std::vector < double >
+		  target = validationTargets[i];
+		
+ 
+for (size_t k = 0; k < target.size (); ++k)
+		  {
+		    
+validationError += std::pow (target[k] - output[k], 2);
+		  
+}
+	      
+}
+	    
+validationError /= (2 * validationData.size ());
+	  
+}
+	
+ 
+logFile << "Epoch " << epoch << " - Training Error: " << epochError
+	  /
+	  numSamples 
+ <<" - Validation Error: " << validationError << std::
+	  endl;
+	
+ 
+if (validationError < bestValidationError)
+	  {
+	    
+bestValidationError = validationError;
+	    
+bestEpoch = epoch;
+	    
+bestWeights = weights;
+	  
+}
+	
+	else if (epoch - bestEpoch >= earlyStoppingThreshold)
+	  {
+	    
+logFile <<
+	      "Early stopping triggered - No improvement in validation error for "
+	      
+ <<earlyStoppingThreshold << " epochs." << std::endl;
+	    
+break;
+	  
+}
+      
+}
+    
+ 
+weights = bestWeights;
+    
+logFile << "Training complete - Best validation error achieved at epoch "
+      << bestEpoch << std::endl;
+    
+logFile.close ();
+  
+}
+  
+ 
+void
+  saveModel (const std::string & filename)
+  {
+    
+std::ofstream file (filename);
+    
+if (!file)
+      {
+	
+throw std::runtime_error ("Failed to open model file: " + filename);
+      
+}
+    
+ 
+file << layers.size () << "\n";
+  
+for (const auto & layer:layers)
+      {
+	
+file << layer.size () << " ";
+      
+} 
+file << "\n";
+  
+ 
+for (const auto & layerWeights:weights)
+      {
+      
+for (const auto & nodeWeights:layerWeights)
+	  {
+	  
+for (const auto & weight:nodeWeights)
+	      {
+		
+file << weight << " ";
+	  
+} 
+} 
+file << "\n";
       
 } 
  
-logFile.close ();
-
+file.close ();
+  
 } 
+ 
+void
+  loadModel (const std::string & filename)
+  {
+    
+std::ifstream file (filename);
+    
+if (!file)
+      {
+	
+throw std::runtime_error ("Failed to open model file: " + filename);
+      
+}
+    
+ 
+std::string line;
+    
+std::getline (file, line);
+    
+int
+      numLayers = std::stoi (line);
+    
+layers.resize (numLayers);
+    
+ 
+std::getline (file, line);
+    
+std::istringstream iss (line);
+  
+for (auto & layer:layers)
+      {
+	
+int
+	  layerSize;
+	
+iss >> layerSize;
+	
+layer.resize (layerSize);
+      
+} 
+ 
+weights.resize (numLayers - 1);
+  
+for (auto & layerWeights:weights)
+      {
+	
+std::getline (file, line);
+	
+std::istringstream iss (line);
+      
+for (auto & nodeWeights:layerWeights)
+	  {
+	  
+for (auto & weight:nodeWeights)
+	      {
+		
+iss >> weight;
+	      
+}
+	  
+}
+      
+}
+    
+ 
+file.close ();
+  
+}
+
 };
 
 
  
 int
-main () 
+main ()
 {
   
 std::vector < std::vector < double >>
   trainingData = { 
-{0.0, 0.0}, 
-{0.0, 1.0}, 
-{1.0, 0.0}, 
-{1.0, 1.0} 
+{0, 0}, 
+{0, 1}, 
+{1, 0}, 
+{1, 1} 
   };
   
  
 std::vector < std::vector < double >>
   targetOutputs = { 
-{0.0}, 
-{1.0}, 
-{1.0}, 
-{0.0} 
+{0}, 
+{1}, 
+{1}, 
+{0} 
   };
   
  
-std::vector < int >
-  layerSizes = { 2, 8, 1 };
+std::vector < std::vector < double >>
+  validationData = { 
+{0, 0}, 
+{0, 1}, 
+{1, 0}, 
+{1, 1} 
+  };
   
-NeuralNetwork network (layerSizes, ActivationType::ReLU);
+ 
+std::vector < std::vector < double >>
+  validationTargets = { 
+{0}, 
+{1}, 
+{1}, 
+{0} 
+  };
   
  
 int
-    numEpochs = 5000;
+    numEpochs = 1000;
   
 double
     learningRate = 0.1;
@@ -405,33 +603,29 @@ int
 double
     regularization = 0.0;
   
-std::string logFilename = "log.txt";
+std::string logFilename = "training_log.txt";
+  
+ActivationType activationType = ActivationType::Sigmoid;
+  
+double
+    earlyStoppingThreshold = 20;
   
  
-network.train (trainingData, targetOutputs, numEpochs, learningRate,
-		    batchSize, regularization, logFilename,
-		    ActivationType::ReLU);
+NeuralNetwork nn (
+			{
+			2, 4, 1}, activationType);
+  
+nn.train (trainingData, targetOutputs, numEpochs, learningRate, batchSize,
+	     
+regularization, logFilename, activationType, 
+validationData,
+	     validationTargets, earlyStoppingThreshold);
   
  
-std::cout << "Training complete!" << std::endl;
+nn.saveModel ("model.txt");
   
- 
-std::cout << "Testing..." << std::endl;
+nn.loadModel ("model.txt");
   
-for (size_t i = 0; i < trainingData.size (); ++i)
-    
-    {
-      
-std::
-	cout << "Input: " << trainingData[i][0] << ", " << trainingData[i][1]
-	<< std::endl;
-      
-std::vector < double >
-	output = network.feedForward (trainingData[i], ActivationType::ReLU);
-      
-std::cout << "Output: " << output[0] << std::endl;
-    
-} 
  
 return 0;
 
