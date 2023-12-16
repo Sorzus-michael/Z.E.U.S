@@ -35,4 +35,3 @@ Drag the CPP file into the NetBeans session.
 Compile it and run it.
 
 
-PS: This is software not hardware so i guess we will never know if it will blend or get sent to the moon XD.
